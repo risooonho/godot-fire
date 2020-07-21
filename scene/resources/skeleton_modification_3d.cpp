@@ -98,9 +98,6 @@ void SkeletonModificationStack3D::execute(float delta) {
 		return;
 	}
 
-	// NOTE: is needed for CCDIK.
-	skeleton->clear_bones_local_pose_override();
-
 	for (int i = 0; i < modifications.size(); i++) {
 		if (!modifications[i].is_valid()) {
 			continue;
