@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  bone_attachment_3d.cpp                                               */
+/*  bone_attachment_3d.h                                                 */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,89 +28,68 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "bone_attachment_3d.h"
+#ifndef BONE_ATTACHMENT_H
+#define BONE_ATTACHMENT_H
 
-void BoneAttachment3D::_validate_property(PropertyInfo &property) const {
-	if (property.name == "bone_name") {
-		Skeleton3D *parent = Object::cast_to<Skeleton3D>(get_parent());
+#include "scene/3d/skeleton_3d.h"
 
-		if (parent) {
-			String names;
-			for (int i = 0; i < parent->get_bone_count(); i++) {
-				if (i > 0) {
-					names += ",";
-				}
-				names += parent->get_bone_name(i);
-			}
+class BoneAttachment3D : public Node3D {
+	GDCLASS(BoneAttachment3D, Node3D);
 
-			property.hint = PROPERTY_HINT_ENUM;
-			property.hint_string = names;
-		} else {
-			property.hint = PROPERTY_HINT_NONE;
-			property.hint_string = "";
-		}
-	}
-}
+	bool bound;
+	String bone_name;
+	int bone_idx = -1;
 
-void BoneAttachment3D::_check_bind() {
-	Skeleton3D *sk = Object::cast_to<Skeleton3D>(get_parent());
-	if (sk) {
-		int idx = sk->find_bone(bone_name);
-		if (idx != -1) {
-			sk->bind_child_node_to_bone(idx, this);
-			set_transform(sk->get_bone_global_pose(idx));
-			bound = true;
-		}
-	}
-}
+	bool override_pose = false;
+	int override_mode = 0;
+	bool _override_dirty = false;
 
-void BoneAttachment3D::_check_unbind() {
-	if (bound) {
-		Skeleton3D *sk = Object::cast_to<Skeleton3D>(get_parent());
-		if (sk) {
-			int idx = sk->find_bone(bone_name);
-			if (idx != -1) {
-				sk->unbind_child_node_from_bone(idx, this);
-			}
-		}
-		bound = false;
-	}
-}
+	enum OVERRIDE_MODES {
+		MODE_GLOBAL_POSE,
+		MODE_LOCAL_POSE,
+		MODE_CUSTOM_POSE
+	};
 
-void BoneAttachment3D::set_bone_name(const String &p_name) {
-	if (is_inside_tree()) {
-		_check_unbind();
-	}
+	bool use_external_skeleton = false;
+	NodePath external_skeleton_node;
+	ObjectID external_skeleton_node_cache;
 
-	bone_name = p_name;
+	void _check_bind();
+	void _check_unbind();
 
-	if (is_inside_tree()) {
-		_check_bind();
-	}
-}
+	void _transform_changed();
+	void _update_external_skeleton_cache();
+	Skeleton3D *_get_skeleton3d();
 
-String BoneAttachment3D::get_bone_name() const {
-	return bone_name;
-}
+protected:
+	virtual void _validate_property(PropertyInfo &property) const override;
+	bool _get(const StringName &p_path, Variant &r_ret) const;
+	bool _set(const StringName &p_path, const Variant &p_value);
+	void _get_property_list(List<PropertyInfo> *p_list) const;
+	void _notification(int p_what);
 
-void BoneAttachment3D::_notification(int p_what) {
-	switch (p_what) {
-		case NOTIFICATION_ENTER_TREE: {
-			_check_bind();
-		} break;
-		case NOTIFICATION_EXIT_TREE: {
-			_check_unbind();
-		} break;
-	}
-}
+	static void _bind_methods();
 
-BoneAttachment3D::BoneAttachment3D() {
-	bound = false;
-}
+public:
+	void set_bone_name(const String &p_name);
+	String get_bone_name() const;
 
-void BoneAttachment3D::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_bone_name", "bone_name"), &BoneAttachment3D::set_bone_name);
-	ClassDB::bind_method(D_METHOD("get_bone_name"), &BoneAttachment3D::get_bone_name);
+	void set_bone_idx(const int &p_idx);
+	int get_bone_idx() const;
 
-	ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, "bone_name"), "set_bone_name", "get_bone_name");
-}
+	void set_override_pose(bool p_override);
+	bool get_override_pose() const;
+	void set_override_mode(int p_mode);
+	int get_override_mode() const;
+
+	void set_use_external_skeleton(bool p_external_skeleton);
+	bool get_use_external_skeleton() const;
+	void set_external_skeleton(NodePath p_skeleton);
+	NodePath get_external_skeleton() const;
+
+	virtual void on_bone_pose_update(int p_bone_index);
+
+	BoneAttachment3D();
+};
+
+#endif // BONE_ATTACHMENT_H
