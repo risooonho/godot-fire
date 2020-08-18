@@ -53,10 +53,6 @@ RID SkinReference::get_skeleton() const {
 	return skeleton;
 }
 
-Skeleton *SkinReference::get_skeleton_node() const {
-	return skeleton_node;
-}
-
 Ref<Skin> SkinReference::get_skin() const {
 	return skin;
 }
