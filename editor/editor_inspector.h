@@ -227,6 +227,9 @@ class EditorInspectorSection : public Container {
 	Color bg_color;
 	bool foldable;
 
+	Timer *dropping_unfold_timer = nullptr;
+	bool dropping = false;
+
 	void _test_unfold();
 
 protected:
