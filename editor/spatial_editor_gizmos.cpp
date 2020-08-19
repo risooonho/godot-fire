@@ -1,5 +1,4 @@
-/*************************************************************************/
-/*  spatial_editor_gizmos.cpp                                            */
+/*************************************************************************//*  spatial_editor_gizmos.cpp                                            */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -1628,7 +1627,6 @@ int SkeletonSpatialGizmoPlugin::get_priority() const {
 }
 
 void SkeletonSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
-
 	Skeleton *skel = Object::cast_to<Skeleton>(p_gizmo->get_spatial_node());
 
 	p_gizmo->clear();
@@ -1659,65 +1657,73 @@ void SkeletonSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 	Color bonecolor = Color(1.0, 0.4, 0.4, 0.3);
 	Color rootcolor = Color(0.4, 1.0, 0.4, 0.1);
 
-	for (int i_bone = 0; i_bone < skel->get_bone_count(); i_bone++) {
+	Vector<int> bones_to_process = skel->get_parentless_bones();
+	while (bones_to_process.size() > 0) {
+		int current_bone_idx = bones_to_process[0];
+		bones_to_process.erase(current_bone_idx);
 
-		int i = skel->get_process_order(i_bone);
+		Vector<int> child_bones_vector = skel->get_bone_children(current_bone_idx);
+		int child_bones_size = child_bones_vector.size();
 
-		int parent = skel->get_bone_parent(i);
+		// You have children but no parent, then you must be a root/parentless bone.
+		if (child_bones_size >= 0 && skel->get_bone_parent(current_bone_idx) <= 0) {
+			grests.write[current_bone_idx] = skel->global_pose_to_local_pose(current_bone_idx, skel->get_bone_global_pose(current_bone_idx));
+		}
 
-		if (parent >= 0) {
-			grests.write[i] = grests[parent] * skel->get_bone_rest(i);
+		for (int i = 0; i < child_bones_size; i++) {
+			int child_bone_idx = child_bones_vector[i];
 
-			Vector3 v0 = grests[parent].origin;
-			Vector3 v1 = grests[i].origin;
-			Vector3 d = (v1 - v0).normalized();
-			float dist = v0.distance_to(v1);
+			grests.write[child_bone_idx] = skel->global_pose_to_local_pose(child_bone_idx, skel->get_bone_global_pose(child_bone_idx));
+			Vector3 v0 = grests[current_bone_idx].origin;
+			Vector3 v1 = grests[child_bone_idx].origin;
+			Vector3 d = skel->get_bone_rest(child_bone_idx).origin.normalized();
+			float dist = skel->get_bone_rest(child_bone_idx).origin.length();
 
-			//find closest axis
+			// Find closest axis
 			int closest = -1;
 			float closest_d = 0.0;
-
 			for (int j = 0; j < 3; j++) {
-				float dp = Math::abs(grests[parent].basis[j].normalized().dot(d));
-				if (j == 0 || dp > closest_d)
+				float dp = Math::abs(grests[current_bone_idx].basis[j].normalized().dot(d));
+				if (j == 0 || dp > closest_d) {
 					closest = j;
+				}
 			}
 
-			//find closest other
+			// Find closest other
 			Vector3 first;
 			Vector3 points[4];
-			int pointidx = 0;
+			int point_idx = 0;
 			for (int j = 0; j < 3; j++) {
-
-				bones.write[0] = parent;
+				bones.write[0] = current_bone_idx;
 				surface_tool->add_bones(bones);
 				surface_tool->add_weights(weights);
 				surface_tool->add_color(rootcolor);
-				surface_tool->add_vertex(v0 - grests[parent].basis[j].normalized() * dist * 0.05);
+				surface_tool->add_vertex(v0 - grests[current_bone_idx].basis[j].normalized() * dist * 0.05);
 				surface_tool->add_bones(bones);
 				surface_tool->add_weights(weights);
 				surface_tool->add_color(rootcolor);
-				surface_tool->add_vertex(v0 + grests[parent].basis[j].normalized() * dist * 0.05);
+				surface_tool->add_vertex(v0 + grests[current_bone_idx].basis[j].normalized() * dist * 0.05);
 
-				if (j == closest)
+				if (j == closest) {
 					continue;
+				}
 
 				Vector3 axis;
 				if (first == Vector3()) {
-					axis = d.cross(d.cross(grests[parent].basis[j])).normalized();
+					axis = d.cross(d.cross(grests[current_bone_idx].basis[j])).normalized();
 					first = axis;
 				} else {
 					axis = d.cross(first).normalized();
 				}
 
 				for (int k = 0; k < 2; k++) {
-
-					if (k == 1)
+					if (k == 1) {
 						axis = -axis;
+					}
 					Vector3 point = v0 + d * dist * 0.2;
 					point += axis * dist * 0.1;
 
-					bones.write[0] = parent;
+					bones.write[0] = current_bone_idx;
 					surface_tool->add_bones(bones);
 					surface_tool->add_weights(weights);
 					surface_tool->add_color(bonecolor);
@@ -1727,24 +1733,22 @@ void SkeletonSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 					surface_tool->add_color(bonecolor);
 					surface_tool->add_vertex(point);
 
-					bones.write[0] = parent;
+					bones.write[0] = current_bone_idx;
 					surface_tool->add_bones(bones);
 					surface_tool->add_weights(weights);
 					surface_tool->add_color(bonecolor);
 					surface_tool->add_vertex(point);
-					bones.write[0] = i;
+					bones.write[0] = child_bone_idx;
 					surface_tool->add_bones(bones);
 					surface_tool->add_weights(weights);
 					surface_tool->add_color(bonecolor);
 					surface_tool->add_vertex(v1);
-					points[pointidx++] = point;
+					points[point_idx++] = point;
 				}
 			}
-
 			SWAP(points[1], points[2]);
 			for (int j = 0; j < 4; j++) {
-
-				bones.write[0] = parent;
+				bones.write[0] = current_bone_idx;
 				surface_tool->add_bones(bones);
 				surface_tool->add_weights(weights);
 				surface_tool->add_color(bonecolor);
@@ -1755,61 +1759,9 @@ void SkeletonSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 				surface_tool->add_vertex(points[(j + 1) % 4]);
 			}
 
-			/*
-			bones[0]=parent;
-			surface_tool->add_bones(bones);
-			surface_tool->add_weights(weights);
-			surface_tool->add_color(Color(0.4,1,0.4,0.4));
-			surface_tool->add_vertex(v0);
-			bones[0]=i;
-			surface_tool->add_bones(bones);
-			surface_tool->add_weights(weights);
-			surface_tool->add_color(Color(0.4,1,0.4,0.4));
-			surface_tool->add_vertex(v1);
-*/
-		} else {
-
-			grests.write[i] = skel->get_bone_rest(i);
-			bones.write[0] = i;
+			// Add the bone's children to the list of bones to be processed
+			bones_to_process.push_back(child_bones_vector[i]);
 		}
-		/*
-		Transform  t = grests[i];
-		t.orthonormalize();
-
-		for (int i=0;i<6;i++) {
-
-
-			Vector3 face_points[4];
-
-			for (int j=0;j<4;j++) {
-
-				float v[3];
-				v[0]=1.0;
-				v[1]=1-2*((j>>1)&1);
-				v[2]=v[1]*(1-2*(j&1));
-
-				for (int k=0;k<3;k++) {
-
-					if (i<3)
-						face_points[j][(i+k)%3]=v[k]*(i>=3?-1:1);
-					else
-						face_points[3-j][(i+k)%3]=v[k]*(i>=3?-1:1);
-				}
-			}
-
-			for(int j=0;j<4;j++) {
-				surface_tool->add_bones(bones);
-				surface_tool->add_weights(weights);
-				surface_tool->add_color(Color(1.0,0.4,0.4,0.4));
-				surface_tool->add_vertex(t.xform(face_points[j]*0.04));
-				surface_tool->add_bones(bones);
-				surface_tool->add_weights(weights);
-				surface_tool->add_color(Color(1.0,0.4,0.4,0.4));
-				surface_tool->add_vertex(t.xform(face_points[(j+1)%4]*0.04));
-			}
-
-		}
-		*/
 	}
 
 	Ref<ArrayMesh> m = surface_tool->commit();
@@ -4360,22 +4312,23 @@ void JointSpatialGizmoPlugin::CreateSliderJointGizmo(const Transform &p_offset, 
 }
 
 void JointSpatialGizmoPlugin::CreateConeTwistJointGizmo(const Transform &p_offset, const Transform &p_trs_joint, const Transform &p_trs_body_a, const Transform &p_trs_body_b, real_t p_swing, real_t p_twist, Vector<Vector3> *r_body_a_points, Vector<Vector3> *r_body_b_points) {
-
-	if (r_body_a_points)
+	if (r_body_a_points) {
 		JointGizmosDrawer::draw_cone(
 				p_offset,
 				JointGizmosDrawer::look_body(p_trs_joint, p_trs_body_a),
 				p_swing,
 				p_twist,
 				*r_body_a_points);
+	}
 
-	if (r_body_b_points)
+	if (r_body_b_points) {
 		JointGizmosDrawer::draw_cone(
 				p_offset,
 				JointGizmosDrawer::look_body(p_trs_joint, p_trs_body_b),
 				p_swing,
 				p_twist,
 				*r_body_b_points);
+	}
 }
 
 void JointSpatialGizmoPlugin::CreateGeneric6DOFJointGizmo(
@@ -4404,7 +4357,6 @@ void JointSpatialGizmoPlugin::CreateGeneric6DOFJointGizmo(
 		Vector<Vector3> &r_points,
 		Vector<Vector3> *r_body_a_points,
 		Vector<Vector3> *r_body_b_points) {
-
 	float cs = 0.25;
 
 	for (int ax = 0; ax < 3; ax++) {
@@ -4465,7 +4417,6 @@ void JointSpatialGizmoPlugin::CreateGeneric6DOFJointGizmo(
 	}
 
 		if (enable_lin && lll >= lul) {
-
 			ADD_VTX(lul, 0, 0);
 			ADD_VTX(lll, 0, 0);
 
@@ -4488,7 +4439,6 @@ void JointSpatialGizmoPlugin::CreateGeneric6DOFJointGizmo(
 			ADD_VTX(lll, -cs, -cs);
 
 		} else {
-
 			ADD_VTX(+cs * 2, 0, 0);
 			ADD_VTX(-cs * 2, 0, 0);
 		}
@@ -4498,7 +4448,7 @@ void JointSpatialGizmoPlugin::CreateGeneric6DOFJointGizmo(
 			ul = -1;
 		}
 
-		if (r_body_a_points)
+		if (r_body_a_points) {
 			JointGizmosDrawer::draw_circle(
 					static_cast<Vector3::Axis>(ax),
 					BODY_A_RADIUS,
@@ -4508,8 +4458,9 @@ void JointSpatialGizmoPlugin::CreateGeneric6DOFJointGizmo(
 					ul,
 					*r_body_a_points,
 					true);
+		}
 
-		if (r_body_b_points)
+		if (r_body_b_points) {
 			JointGizmosDrawer::draw_circle(
 					static_cast<Vector3::Axis>(ax),
 					BODY_B_RADIUS,
@@ -4518,7 +4469,7 @@ void JointSpatialGizmoPlugin::CreateGeneric6DOFJointGizmo(
 					ll,
 					ul,
 					*r_body_b_points);
+		}
 	}
-
 #undef ADD_VTX
 }

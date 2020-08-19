@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  skeleton_editor_plugin.h                                             */
+/*  skeleton_3d_editor_plugin.h                                          */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,8 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef SKELETON_EDITOR_PLUGIN_H
-#define SKELETON_EDITOR_PLUGIN_H
+#ifndef SKELETON_3D_EDITOR_PLUGIN_H
+#define SKELETON_3D_EDITOR_PLUGIN_H
 
 #include "editor/editor_node.h"
 #include "editor/editor_plugin.h"
@@ -88,7 +88,6 @@ class BoneTransformEditor : public VBoxContainer {
 
 protected:
 	void _notification(int p_what);
-	static void _bind_methods();
 
 public:
 	BoneTransformEditor(Skeleton *p_skeleton);
@@ -191,8 +190,8 @@ class EditorInspectorPluginSkeleton : public EditorInspectorPlugin {
 	EditorNode *editor;
 
 public:
-	virtual bool can_handle(Object *p_object);
-	virtual void parse_begin(Object *p_object);
+	virtual bool can_handle(Object *p_object) override;
+	virtual void parse_begin(Object *p_object) override;
 };
 
 class SkeletonEditorPlugin : public EditorPlugin {
@@ -203,7 +202,7 @@ class SkeletonEditorPlugin : public EditorPlugin {
 public:
 	SkeletonEditorPlugin(EditorNode *p_node);
 
-	virtual String get_name() const { return "Skeleton"; }
+	virtual String get_name() const override { return "Skeleton"; }
 };
 
-#endif // SKELETON_EDITOR_PLUGIN_H
+#endif // SKELETON_3D_EDITOR_PLUGIN_H

@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  skeleton_editor_plugin.cpp                                           */
+/*  skeleton_3d_editor_plugin.cpp                                        */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -35,13 +35,13 @@
 #include "editor/editor_properties.h"
 #include "editor/editor_scale.h"
 #include "editor/plugins/animation_player_editor_plugin.h"
+#include "spatial_editor_plugin.h"
 #include "scene/3d/collision_shape.h"
 #include "scene/3d/mesh_instance.h"
 #include "scene/3d/physics_body.h"
 #include "scene/3d/physics_joint.h"
 #include "scene/resources/capsule_shape.h"
 #include "scene/resources/sphere_shape.h"
-#include "spatial_editor_plugin.h"
 
 void BoneTransformEditor::create_editors() {
 	const Color section_color = get_color("prop_subsection", "Editor");
@@ -181,7 +181,7 @@ void BoneTransformEditor::_value_changed_vector3(const String p_property_name, c
 }
 
 Transform BoneTransformEditor::compute_transform_from_vector3s() const {
-	// Convert rotation from degrees to radians
+	// Convert rotation from degrees to radians.
 	Vector3 prop_rotation = rotation_property->get_vector();
 	prop_rotation.x = Math::deg2rad(prop_rotation.x);
 	prop_rotation.y = Math::deg2rad(prop_rotation.y);
@@ -193,9 +193,8 @@ Transform BoneTransformEditor::compute_transform_from_vector3s() const {
 }
 
 void BoneTransformEditor::_value_changed_transform(const String p_property_name, const Transform p_transform, const StringName p_edited_property_name, const bool p_boolean) {
-	if (updating) {
+	if (updating)
 		return;
-	}
 	_change_transform(p_transform);
 }
 
@@ -219,14 +218,6 @@ void BoneTransformEditor::update_enabled_checkbox() {
 		const bool is_enabled = skeleton->get(path);
 		enabled_checkbox->set_pressed(is_enabled);
 	}
-}
-
-void BoneTransformEditor::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("_value_changed", "value"), &BoneTransformEditor::_value_changed);
-	ClassDB::bind_method(D_METHOD("_value_changed_transform", "name", "transform", "property_name", "boolean"), &BoneTransformEditor::_value_changed_transform);
-	ClassDB::bind_method(D_METHOD("_value_changed_vector3", "name", "vector", "property_name", "boolean"), &BoneTransformEditor::_value_changed_vector3);
-	ClassDB::bind_method(D_METHOD("_key_button_pressed"), &BoneTransformEditor::_key_button_pressed);
-	ClassDB::bind_method(D_METHOD("_checkbox_toggled", "toggled"), &BoneTransformEditor::_checkbox_toggled);
 }
 
 void BoneTransformEditor::_update_properties() {
@@ -311,7 +302,6 @@ void BoneTransformEditor::_key_button_pressed() {
 
 	// Need to normalize the basis before you key it
 	Transform tform = compute_transform_from_vector3s();
-	tform.basis.orthonormalize();
 	tform.orthonormalize();
 	AnimationPlayerEditor::singleton->get_track_editor()->insert_transform_key(skeleton, name, tform);
 }
@@ -540,23 +530,30 @@ void SkeletonEditor::update_joint_tree() {
 
 	items.insert(-1, root);
 
-	const Vector<int> &joint_porder = skeleton->get_bone_process_orders();
+	Ref<Texture> bone_icon = get_icon("BoneAttachment3D", "EditorIcons");
 
-	Ref<Texture> bone_icon = get_icon("BoneAttachment", "EditorIcons");
+	Vector<int> bones_to_process = skeleton->get_parentless_bones();
+	while (bones_to_process.size() > 0) {
+		int current_bone_idx = bones_to_process[0];
+		bones_to_process.erase(current_bone_idx);
 
-	for (int i = 0; i < joint_porder.size(); ++i) {
-		const int b_idx = joint_porder[i];
+		const int parent_idx = skeleton->get_bone_parent(current_bone_idx);
+		TreeItem *parent_item = items.find(parent_idx)->get();
 
-		const int p_idx = skeleton->get_bone_parent(b_idx);
-		TreeItem *p_item = items.find(p_idx)->get();
+		TreeItem *joint_item = joint_tree->create_item(parent_item);
+		items.insert(current_bone_idx, joint_item);
 
-		TreeItem *joint_item = joint_tree->create_item(p_item);
-		items.insert(b_idx, joint_item);
-
-		joint_item->set_text(0, skeleton->get_bone_name(b_idx));
+		joint_item->set_text(0, skeleton->get_bone_name(current_bone_idx));
 		joint_item->set_icon(0, bone_icon);
 		joint_item->set_selectable(0, true);
-		joint_item->set_metadata(0, "bones/" + itos(b_idx));
+		joint_item->set_metadata(0, "bones/" + itos(current_bone_idx));
+
+		// Add the bone's children to the list of bones to be processed
+		Vector<int> current_bone_child_bones = skeleton->get_bone_children(current_bone_idx);
+		int child_bone_size = current_bone_child_bones.size();
+		for (int i = 0; i < child_bone_size; i++) {
+			bones_to_process.push_back(current_bone_child_bones[i]);
+		}
 	}
 }
 

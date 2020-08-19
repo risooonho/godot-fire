@@ -32,6 +32,7 @@
 #define PHYSICAL_BONE_PLUGIN_H
 
 #include "editor/editor_node.h"
+#include "scene/3d/physics_body.h"
 
 class PhysicalBoneEditor : public Object {
 	GDCLASS(PhysicalBoneEditor, Object);
