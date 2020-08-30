@@ -33,7 +33,6 @@
 #include "core/io/resource_saver.h"
 #include "editor/editor_node.h"
 #include "scene/3d/bone_attachment.h"
-#include "scene/resources/packed_scene.h"
 #include "scene/3d/collision_shape.h"
 #include "scene/3d/mesh_instance.h"
 #include "scene/3d/navigation.h"
@@ -1166,6 +1165,7 @@ void ResourceImporterScene::get_import_options(List<ImportOption> *r_options, in
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "materials/location", PROPERTY_HINT_ENUM, "Node,Mesh"), (meshes_out || materials_out) ? 1 : 0));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "materials/storage", PROPERTY_HINT_ENUM, "Built-In,Files (.material),Files (.tres)", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), materials_out ? 1 : 0));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "materials/keep_on_reimport"), materials_out));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "skeleton/point_to_children"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "meshes/compress"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "meshes/ensure_tangents"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "meshes/storage", PROPERTY_HINT_ENUM, "Built-In,Files (.mesh),Files (.tres)"), meshes_out ? 1 : 0));
@@ -1582,6 +1582,12 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 	Map<Ref<Mesh>, List<Ref<Shape> > > collision_map;
 
 	scene = _fix_node(scene, scene, collision_map, LightBakeMode(light_bake_mode));
+
+	bool is_skeleton_point_to_children = p_options["skeleton/point_to_children"];
+
+	if (is_skeleton_point_to_children) {
+		_skeleton_point_to_children(scene);
+	}
 
 	if (use_optimizer) {
 		_optimize_animations(scene, anim_optimizer_linerr, anim_optimizer_angerr, anim_optimizer_maxang, use_convert_bezier);
