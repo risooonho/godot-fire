@@ -1151,7 +1151,7 @@ void EditorInspectorSection::_notification(int p_what) {
 			draw_rect(Rect2(Point2(), get_size()), accent_color, false);
 		}
 	}
-
+	
 	if (p_what == NOTIFICATION_DRAG_BEGIN) {
 		Dictionary dd = get_viewport()->gui_get_drag_data();
 
