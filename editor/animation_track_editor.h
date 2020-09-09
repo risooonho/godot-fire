@@ -441,7 +441,6 @@ class AnimationTrackEditor : public VBoxContainer {
 	SpinBox *optimize_linear_error;
 	SpinBox *optimize_angular_error;
 	SpinBox *optimize_max_angle;
-	CheckBox *optimize_convert_bezier;
 
 	ConfirmationDialog *cleanup_dialog;
 	CheckBox *cleanup_keys;
