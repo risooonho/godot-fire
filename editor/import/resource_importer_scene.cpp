@@ -90,7 +90,6 @@ Ref<Animation> EditorSceneImporter::import_animation(const String &p_path, uint3
 //and you want to load the resulting file
 
 Node *EditorSceneImporter::import_scene_from_other_importer(const String &p_path, uint32_t p_flags, int p_bake_fps) {
-
 	return ResourceImporterScene::get_singleton()->import_scene_from_other_importer(this, p_path, p_flags, p_bake_fps);
 }
 
@@ -187,7 +186,6 @@ String ResourceImporterScene::get_resource_type() const {
 }
 
 bool ResourceImporterScene::get_option_visibility(const String &p_option, const Map<StringName, Variant> &p_options) const {
-
 	if (p_option.begins_with("animation/")) {
 		if (p_option != "animation/import" && !bool(p_options["animation/import"]))
 			return false;
